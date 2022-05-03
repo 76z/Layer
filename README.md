@@ -6,9 +6,9 @@ wget https://raw.githubusercontent.com/76z/Layer/main/Layer4/Layer4 && chmod +x 
 ```
 #### NTP-Script
 ``` bash
-./NTP-Script
+cd NTP/ && ./NTP-Script
 ``` 
 #### SSDP-Script
 ``` bash
-./SSDP-Script
+cd SSDP/ && ./SSDP-Script
 ``` 
